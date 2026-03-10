@@ -1,0 +1,1567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wishlink · Creator Commerce Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #09090f;
+    --surface: #111118;
+    --surface2: #18181f;
+    --surface3: #1e1e28;
+    --border: rgba(255,255,255,0.11);
+    --gold: #d4b05a;
+    --gold2: #f2d878;
+    --gold-dim: rgba(201,168,76,0.15);
+    --gold-glow: rgba(201,168,76,0.08);
+    --text: #f9f6f2;
+    --text2: #c8c5d0;
+    --text3: #8e8b9c;
+    --teal: #4edfc2;
+    --teal-dim: rgba(62,207,178,0.12);
+    --rose: #ff7e90;
+    --rose-dim: rgba(240,106,126,0.12);
+    --blue: #85b5f5;
+    --blue-dim: rgba(106,159,240,0.12);
+    --purple: #a87df0;
+    --r: 12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* NOISE TEXTURE OVERLAY */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  /* AMBIENT GLOW */
+  .ambient {
+    position: fixed;
+    width: 600px; height: 600px;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .ambient-1 { background: rgba(201,168,76,0.06); top: -200px; left: -100px; }
+  .ambient-2 { background: rgba(62,207,178,0.04); bottom: -200px; right: -100px; }
+
+  /* LAYOUT */
+  .shell { position: relative; z-index: 1; }
+
+  /* HEADER */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 24px 40px 20px;
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(10px);
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(9,9,15,0.85);
+  }
+  .logo-group { display: flex; align-items: center; gap: 14px; }
+  .logo-icon {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--gold), #8b6820);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 700; color: #fff;
+    font-family: 'Playfair Display', serif;
+    box-shadow: 0 0 20px rgba(201,168,76,0.3);
+  }
+  .logo-text { font-family: 'Playfair Display', serif; font-size: 21px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
+  .logo-sub { font-size: 13px; color: var(--text3); font-weight: 400; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 1px; }
+
+  .header-badges { display: flex; align-items: center; gap: 10px; }
+  .badge {
+    padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; letter-spacing: 0.5px;
+    border: 1px solid var(--border);
+  }
+  .badge-live { background: rgba(62,207,178,0.1); border-color: rgba(62,207,178,0.3); color: var(--teal); }
+  .badge-live::before { content: '●'; margin-right: 5px; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .badge-period { background: var(--gold-dim); border-color: rgba(201,168,76,0.3); color: var(--gold2); }
+
+  /* NAV TABS */
+  nav {
+    display: flex; gap: 4px;
+    padding: 16px 40px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    padding: 10px 20px; border-radius: 8px 8px 0 0; font-size: 15px; font-weight: 500;
+    color: var(--text3); cursor: pointer; border: none; background: none;
+    transition: all 0.2s; position: relative; letter-spacing: 0.2px;
+  }
+  .tab:hover { color: var(--text2); background: var(--surface2); }
+  .tab.active { color: var(--gold2); background: var(--surface2); }
+  .tab.active::after {
+    content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--gold), var(--gold2));
+  }
+
+  /* MAIN CONTENT */
+  main { padding: 32px 40px 60px; }
+
+  .panel { display: none; animation: fadeUp 0.35s ease; }
+  .panel.active { display: block; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* SECTION TITLE */
+  .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; }
+  .section-title { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 600; color: var(--text); }
+  .section-tag { font-size: 13px; color: var(--text3); letter-spacing: 1.2px; text-transform: uppercase; padding: 4px 10px; border: 1px solid var(--border); border-radius: 20px; }
+
+  /* KPI GRID */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 22px 24px;
+    position: relative; overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s;
+    cursor: default;
+  }
+  .kpi-card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.12); }
+  .kpi-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  }
+  .kpi-card.gold::before { background: linear-gradient(90deg, var(--gold), var(--gold2)); }
+  .kpi-card.teal::before { background: linear-gradient(90deg, var(--teal), #2af5d8); }
+  .kpi-card.rose::before { background: linear-gradient(90deg, var(--rose), #f09060); }
+  .kpi-card.blue::before { background: linear-gradient(90deg, var(--blue), #a0c4f0); }
+
+  .kpi-card::after {
+    content: ''; position: absolute; bottom: 0; right: 0; width: 80px; height: 80px;
+    border-radius: 50%; opacity: 0.05; filter: blur(20px);
+  }
+  .kpi-card.gold::after { background: var(--gold); }
+  .kpi-card.teal::after { background: var(--teal); }
+  .kpi-card.rose::after { background: var(--rose); }
+  .kpi-card.blue::after { background: var(--blue); }
+
+  .kpi-label { font-size: 13px; color: var(--text3); letter-spacing: 1.2px; text-transform: uppercase; font-weight: 500; margin-bottom: 10px; }
+  .kpi-value { font-family: 'Playfair Display', serif; font-size: 36px; font-weight: 700; color: var(--text); line-height: 1; }
+  .kpi-sub { margin-top: 8px; font-size: 13px; color: var(--text3); display: flex; align-items: center; gap: 6px; }
+  .kpi-delta { padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+  .kpi-delta.pos { background: rgba(62,207,178,0.15); color: var(--teal); }
+  .kpi-delta.neg { background: rgba(240,106,126,0.15); color: var(--rose); }
+  .kpi-icon { position: absolute; top: 20px; right: 20px; font-size: 20px; opacity: 0.6; }
+
+  /* CHART CARDS */
+  .chart-row { display: grid; gap: 16px; margin-bottom: 16px; }
+  .chart-row-2 { grid-template-columns: 1fr 1fr; }
+  .chart-row-3 { grid-template-columns: 2fr 1fr; }
+  .chart-row-full { grid-template-columns: 1fr; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
+    overflow: hidden;
+  }
+  .card-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .card-title { font-size: 16px; font-weight: 600; color: var(--text); letter-spacing: -0.2px; }
+  .card-subtitle { font-size: 13px; color: var(--text3); margin-top: 2px; }
+  .card-body { padding: 20px 24px; }
+  .card-body-flush { padding: 0; }
+  .chart-wrap { position: relative; height: 280px; }
+  .chart-wrap-sm { height: 220px; }
+  .chart-wrap-lg { height: 340px; }
+
+  /* FUNNEL */
+  .funnel-container { padding: 24px; }
+  .funnel-stage {
+    display: flex; align-items: center; gap: 16px; margin-bottom: 16px;
+  }
+  .funnel-bar-wrap { flex: 1; }
+  .funnel-label { width: 90px; font-size: 15px; color: var(--text2); font-weight: 500; text-align: right; }
+  .funnel-count { width: 80px; font-family: 'DM Mono', monospace; font-size: 16px; color: var(--text); font-weight: 500; text-align: right; }
+  .funnel-bar {
+    height: 36px; border-radius: 4px; position: relative;
+    display: flex; align-items: center; padding: 0 12px;
+    transition: width 1s ease;
+  }
+  .funnel-pct { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.7); letter-spacing: 0.5px; }
+  .funnel-drop { font-size: 13px; color: var(--text3); margin-left: 8px; }
+
+  /* LEADERBOARD TABLE */
+  .lb-table { width: 100%; border-collapse: collapse; }
+  .lb-table th {
+    padding: 11px 16px; text-align: left; font-size: 12px; color: var(--text3);
+    letter-spacing: 1.2px; text-transform: uppercase; font-weight: 500;
+    border-bottom: 1px solid var(--border);
+  }
+  .lb-table td { padding: 13px 16px; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .lb-table tr:last-child td { border-bottom: none; }
+  .lb-table tr:hover td { background: var(--surface2); }
+
+  .rank-badge {
+    width: 26px; height: 26px; border-radius: 6px; display: inline-flex;
+    align-items: center; justify-content: center; font-size: 11px; font-weight: 700;
+    font-family: 'DM Mono', monospace;
+  }
+  .rank-1 { background: linear-gradient(135deg, #c9a84c, #e8c96d); color: #000; }
+  .rank-2 { background: linear-gradient(135deg, #8a9ba8, #b0bec5); color: #000; }
+  .rank-3 { background: linear-gradient(135deg, #bf7c4a, #d4956b); color: #000; }
+  .rank-n { background: var(--surface3); color: var(--text3); }
+
+  .creator-id { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--text2); }
+  .metric-val { font-family: 'DM Mono', monospace; font-size: 14px; }
+  .metric-gold { color: var(--gold2); }
+  .metric-teal { color: var(--teal); }
+  .metric-rose { color: var(--rose); }
+
+  .bar-mini { height: 4px; border-radius: 2px; background: var(--surface3); overflow: hidden; margin-top: 4px; }
+  .bar-mini-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--gold), var(--gold2)); }
+
+  /* COHORT HEATMAP */
+  .cohort-table { width: 100%; border-collapse: collapse; font-family: 'DM Mono', monospace; font-size: 13px; }
+  .cohort-table th { padding: 7px 8px; text-align: center; color: var(--text3); font-size: 12px; font-weight: 500; letter-spacing: 0.5px; }
+  .cohort-table td { padding: 4px; text-align: center; }
+  .cohort-cell {
+    width: 50px; height: 34px; border-radius: 4px; display: inline-flex;
+    align-items: center; justify-content: center; font-size: 12px; font-weight: 600;
+    cursor: default; transition: transform 0.15s;
+  }
+  .cohort-cell:hover { transform: scale(1.1); z-index: 10; position: relative; }
+  .cohort-label { color: var(--text3); font-size: 13px; text-align: left; padding-left: 4px; white-space: nowrap; }
+
+  /* CATEGORY LIFT */
+  .lift-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 20px 24px; }
+  .lift-item {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .lift-item:hover { transform: translateY(-2px); border-color: rgba(201,168,76,0.2); }
+  .lift-icon { font-size: 22px; width: 36px; text-align: center; }
+  .lift-info { flex: 1; }
+  .lift-category { font-size: 15px; font-weight: 600; color: var(--text); }
+  .lift-meta { font-size: 13px; color: var(--text3); margin-top: 2px; }
+  .lift-score {
+    font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700;
+    color: var(--gold2);
+  }
+  .lift-score span { font-size: 13px; color: var(--text3); font-family: 'DM Sans', sans-serif; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+
+  /* FILTER ROW */
+  .filter-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .filter-btn {
+    padding: 7px 16px; border-radius: 6px; font-size: 13px; font-weight: 500;
+    border: 1px solid var(--border); background: var(--surface2); color: var(--text3);
+    cursor: pointer; transition: all 0.2s;
+  }
+  .filter-btn:hover { border-color: rgba(201,168,76,0.3); color: var(--text2); }
+  .filter-btn.active { background: var(--gold-dim); border-color: rgba(201,168,76,0.4); color: var(--gold2); }
+
+  /* INSIGHT CALLOUT */
+  .insight-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+  .insight-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r); padding: 16px 20px;
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .insight-num-ignore {: 'Playfair Display', serif; font-size: 33px; font-weight: 700;
+    line-height: 1; min-width: 50px;
+  }
+  .insight-num.gold { color: var(--gold2); }
+  .insight-num.teal { color: var(--teal); }
+  .insight-num.rose { color: var(--rose); }
+  .insight-desc { font-size: 14px; color: var(--text3); line-height: 1.5; }
+  .insight-desc strong { color: var(--text2); }
+
+  /* EMPTY CELL */
+  .empty-cell { color: var(--surface3); }
+
+  /* RESPONSIVE SCROLLABLE TABLE WRAP */
+  .table-scroll { overflow-x: auto; }
+
+  /* SPARKLINES */
+  .sparkline-wrap { display: flex; align-items: center; gap: 6px; }
+  canvas.sparkline { height: 24px !important; width: 80px !important; }
+
+  /* FOOTER */
+  .dash-footer {
+    text-align: center; padding: 24px 40px;
+    border-top: 1px solid var(--border);
+    font-size: 13px; color: var(--text3); letter-spacing: 0.5px;
+  }
+  .dash-footer a { color: var(--gold); text-decoration: none; }
+  .dash-footer a:hover { color: var(--gold2); }
+
+  /* TOOLTIP CUSTOM */
+  .tooltip-custom {
+    background: var(--surface3) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+    color: var(--text) !important;
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 12px !important;
+  }
+</style>
+</head>
+<body>
+<div class="ambient ambient-1"></div>
+<div class="ambient ambient-2"></div>
+
+<div class="shell">
+<header>
+  <div class="logo-group">
+    <div class="logo-icon">W</div>
+    <div>
+      <div class="logo-text">Wishlink Analytics</div>
+      <div class="logo-sub">Creator Commerce Intelligence</div>
+    </div>
+  </div>
+  <div class="header-badges">
+    <span class="badge badge-live">Live Data</span>
+    <span class="badge badge-period">Jan – Dec 2023</span>
+    <span class="badge" style="color:var(--text3);">50 Creators · 12 Categories</span>
+  </div>
+</header>
+
+<nav id="mainNav">
+  <button class="tab active" onclick="showPanel('overview', this)">⬡ Overview</button>
+  <button class="tab" onclick="showPanel('creators', this)">◈ Creator Leaderboard</button>
+  <button class="tab" onclick="showPanel('funnel', this)">⬟ Conversion Funnel</button>
+  <button class="tab" onclick="showPanel('cohort', this)">⊞ Cohort Retention</button>
+  <button class="tab" onclick="showPanel('lift', this)">◬ Category Lift</button>
+</nav>
+
+<main>
+
+<!-- ════════════════════════════════════════════
+     PANEL: OVERVIEW
+════════════════════════════════════════════ -->
+<div class="panel active" id="panel-overview">
+  <div class="section-header">
+    <span class="section-title">Platform Performance</span>
+    <span class="section-tag">Full Year 2023</span>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card gold">
+      <span class="kpi-icon">◈</span>
+      <div class="kpi-label">Total GMV</div>
+      <div class="kpi-value" id="kpi-gmv">₹0</div>
+      <div class="kpi-sub"><span class="kpi-delta pos">+18.4%</span> vs prior period</div>
+    </div>
+    <div class="kpi-card teal">
+      <span class="kpi-icon">⬡</span>
+      <div class="kpi-label">Total Purchases</div>
+      <div class="kpi-value" id="kpi-purchases">0</div>
+      <div class="kpi-sub"><span class="kpi-delta pos">+12.1%</span> vs prior period</div>
+    </div>
+    <div class="kpi-card blue">
+      <span class="kpi-icon">◎</span>
+      <div class="kpi-label">Conversion Rate</div>
+      <div class="kpi-value" id="kpi-conv">0%</div>
+      <div class="kpi-sub"><span class="kpi-delta pos">+5.6pp</span> click-to-purchase</div>
+    </div>
+    <div class="kpi-card rose">
+      <span class="kpi-icon">◇</span>
+      <div class="kpi-label">Avg. Order Value</div>
+      <div class="kpi-value" id="kpi-aov">₹0</div>
+      <div class="kpi-sub"><span class="kpi-delta neg">-2.3%</span> vs prior period</div>
+    </div>
+  </div>
+
+  <div class="insight-row">
+    <div class="insight-card">
+      <div class="insight-num gold">3.3×</div>
+      <div class="insight-desc"><strong>Peak Category Lift</strong><br>Toys category via Creator #15 — highest conversion lift vs baseline</div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-num teal">90.9%</div>
+      <div class="insight-desc"><strong>Click-to-Purchase Rate</strong><br>246 clicks converting to 238 purchases — exceptionally strong intent</div>
+    </div>
+    <div class="insight-card">
+      <div class="insight-num rose">Top 10</div>
+      <div class="insight-desc"><strong>Creator Concentration</strong><br>Top 10 creators drive 60%+ of total GMV — high-value tier identified</div>
+    </div>
+  </div>
+
+  <div class="chart-row chart-row-full" style="margin-bottom:16px">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Daily GMV & Purchase Trend</div>
+          <div class="card-subtitle">January – December 2023</div>
+        </div>
+        <div class="filter-row">
+          <button class="filter-btn active" onclick="setTrend('gmv',this)">GMV</button>
+          <button class="filter-btn" onclick="setTrend('purchases',this)">Purchases</button>
+          <button class="filter-btn" onclick="setTrend('both',this)">Both</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="chart-wrap chart-wrap-lg"><canvas id="trendChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-row chart-row-2">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Monthly GMV Breakdown</div>
+          <div class="card-subtitle">Revenue aggregated by month</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="chart-wrap"><canvas id="monthlyChart"></canvas></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">GMV by Category</div>
+          <div class="card-subtitle">Creator category distribution</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="chart-wrap"><canvas id="catPieChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     PANEL: CREATORS
+════════════════════════════════════════════ -->
+<div class="panel" id="panel-creators">
+  <div class="section-header">
+    <span class="section-title">Creator Leaderboard</span>
+    <span class="section-tag">Ranked by GMV</span>
+  </div>
+
+  <div class="chart-row chart-row-2" style="margin-bottom:16px">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Top 10 Creators — GMV</div>
+      </div>
+      <div class="card-body">
+        <div class="chart-wrap"><canvas id="creatorGMVChart"></canvas></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Conversion Rate Distribution</div>
+        <div class="card-subtitle">Conv% across all creators</div>
+      </div>
+      <div class="card-body">
+        <div class="chart-wrap"><canvas id="convScatterChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">All Creators · Performance Matrix</div>
+      <div class="card-subtitle">Sorted by GMV (descending)</div>
+    </div>
+    <div class="card-body-flush table-scroll" style="max-height: 480px; overflow-y: auto;">
+      <table class="lb-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Creator</th>
+            <th>GMV (₹)</th>
+            <th>Purchases</th>
+            <th>Views</th>
+            <th>Clicks</th>
+            <th>Followers</th>
+            <th>Conv%</th>
+            <th>GMV Share</th>
+          </tr>
+        </thead>
+        <tbody id="lbTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     PANEL: FUNNEL
+════════════════════════════════════════════ -->
+<div class="panel" id="panel-funnel">
+  <div class="section-header">
+    <span class="section-title">Conversion Funnel</span>
+    <span class="section-tag">End-to-End Journey</span>
+  </div>
+
+  <div class="chart-row" style="grid-template-columns: 1.2fr 1fr; margin-bottom: 16px;">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Purchase Funnel — Platform-Wide</div>
+          <div class="card-subtitle">Views → Clicks → Purchases</div>
+        </div>
+      </div>
+      <div class="funnel-container" id="funnelViz"></div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Stage Drop-Off Analysis</div>
+          <div class="card-subtitle">Percentage retained per stage</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="chart-wrap"><canvas id="funnelBarChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Funnel Metrics Summary</div>
+    </div>
+    <div class="card-body">
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
+        <div style="text-align:center;">
+          <div style="font-family:'DM Mono',monospace; font-size:40px; font-weight:600; color:var(--blue);">264</div>
+          <div style="font-size:14px; color:var(--text3); margin-top:4px; text-transform:uppercase; letter-spacing:1px;">Total Views</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-family:'DM Mono',monospace; font-size:40px; font-weight:600; color:var(--gold2);">246</div>
+          <div style="font-size:14px; color:var(--text3); margin-top:4px; text-transform:uppercase; letter-spacing:1px;">Total Clicks</div>
+          <div style="font-size:13px; color:var(--teal); margin-top:2px;">93.2% of Views</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-family:'DM Mono',monospace; font-size:40px; font-weight:600; color:var(--teal);">238</div>
+          <div style="font-size:14px; color:var(--text3); margin-top:4px; text-transform:uppercase; letter-spacing:1px;">Purchases</div>
+          <div style="font-size:13px; color:var(--teal); margin-top:2px;">96.7% of Clicks</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-family:'Playfair Display',serif; font-size:40px; font-weight:700; color:var(--rose);">₹57.6K</div>
+          <div style="font-size:14px; color:var(--text3); margin-top:4px; text-transform:uppercase; letter-spacing:1px;">Total GMV</div>
+          <div style="font-size:13px; color:var(--gold); margin-top:2px;">₹242 avg order</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     PANEL: COHORT
+════════════════════════════════════════════ -->
+<div class="panel" id="panel-cohort">
+  <div class="section-header">
+    <span class="section-title">Cohort Retention Analysis</span>
+    <span class="section-tag">Monthly Cohorts</span>
+  </div>
+
+  <div class="chart-row chart-row-2" style="margin-bottom:16px">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Retention by Cohort Month</div>
+        <div class="card-subtitle">% of original cohort active in each month</div>
+      </div>
+      <div class="card-body">
+        <div class="chart-wrap chart-wrap-lg"><canvas id="cohortLineChart"></canvas></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Cohort Size Comparison</div>
+        <div class="card-subtitle">Users acquired per cohort</div>
+      </div>
+      <div class="card-body">
+        <div class="chart-wrap chart-wrap-lg"><canvas id="cohortSizeChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Retention Heatmap</div>
+      <div class="card-subtitle">Month 0 = acquisition month · Color intensity = retention %</div>
+    </div>
+    <div class="card-body table-scroll">
+      <div id="cohortHeatmap"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     PANEL: LIFT
+════════════════════════════════════════════ -->
+<div class="panel" id="panel-lift">
+  <div class="section-header">
+    <span class="section-title">Category Lift Analysis</span>
+    <span class="section-tag">Creator × Category Performance</span>
+  </div>
+
+  <div class="chart-row chart-row-2" style="margin-bottom:16px">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Top Lift Scores by Category</div>
+        <div class="card-subtitle">Creator conversion vs category baseline</div>
+      </div>
+      <div class="card-body">
+        <div class="chart-wrap chart-wrap-lg"><canvas id="liftBarChart"></canvas></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Category GMV Distribution</div>
+        <div class="card-subtitle">Total GMV across categories (high-lift creators)</div>
+      </div>
+      <div class="card-body">
+        <div class="chart-wrap chart-wrap-lg"><canvas id="liftGMVChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Top Category–Creator Lift Combinations</div>
+      <div class="card-subtitle">Pairs with lift > 1.0 (creator outperforms category average)</div>
+    </div>
+    <div class="lift-grid" id="liftGrid"></div>
+  </div>
+</div>
+
+</main>
+
+<div class="dash-footer">
+  Built by <a href="#">Rohit Mannur</a> · Wishlink Creator Commerce Analytics ·
+  <a href="https://public.tableau.com/app/profile/rohit.mannur3130/viz/Creator-DrivenCommerceAnalyticsWishlinkRohitMannur/WishlinkProductPerformanceDashboard" target="_blank">View Tableau ↗</a>
+</div>
+</div>
+
+<script>
+// =====================================================
+// DATA
+// =====================================================
+const timeseriesRaw = [
+{"day":"2023-01-01","gmv":0,"views":2,"purchases":0},
+{"day":"2023-01-02","gmv":375.22,"views":0,"purchases":1},
+{"day":"2023-01-03","gmv":600.48,"views":0,"purchases":2},
+{"day":"2023-01-04","gmv":0,"views":0,"purchases":0},
+{"day":"2023-01-06","gmv":88.06,"views":0,"purchases":1},
+{"day":"2023-01-08","gmv":341.18,"views":0,"purchases":1},
+{"day":"2023-01-10","gmv":192.66,"views":0,"purchases":1},
+{"day":"2023-01-11","gmv":197.88,"views":1,"purchases":2},
+{"day":"2023-01-13","gmv":366.86,"views":1,"purchases":1},
+{"day":"2023-01-15","gmv":791.43,"views":0,"purchases":2},
+{"day":"2023-01-16","gmv":205.14,"views":2,"purchases":1},
+{"day":"2023-01-17","gmv":482.91,"views":1,"purchases":1},
+{"day":"2023-01-18","gmv":146.91,"views":0,"purchases":3},
+{"day":"2023-01-19","gmv":817.61,"views":1,"purchases":2},
+{"day":"2023-01-20","gmv":18.35,"views":0,"purchases":1},
+{"day":"2023-01-21","gmv":240.11,"views":0,"purchases":1},
+{"day":"2023-01-22","gmv":499.95,"views":0,"purchases":1},
+{"day":"2023-01-23","gmv":501.52,"views":0,"purchases":2},
+{"day":"2023-01-25","gmv":302.2,"views":0,"purchases":1},
+{"day":"2023-01-26","gmv":720.27,"views":0,"purchases":3},
+{"day":"2023-01-27","gmv":109.77,"views":1,"purchases":1},
+{"day":"2023-01-28","gmv":420.48,"views":0,"purchases":2},
+{"day":"2023-01-29","gmv":588.69,"views":3,"purchases":3},
+{"day":"2023-01-30","gmv":411.22,"views":0,"purchases":2},
+{"day":"2023-01-31","gmv":270.51,"views":0,"purchases":2},
+{"day":"2023-02-01","gmv":285.62,"views":1,"purchases":2},
+{"day":"2023-02-02","gmv":415.88,"views":0,"purchases":1},
+{"day":"2023-02-03","gmv":326.82,"views":0,"purchases":1},
+{"day":"2023-02-05","gmv":520.28,"views":2,"purchases":2},
+{"day":"2023-02-06","gmv":617.63,"views":1,"purchases":2},
+{"day":"2023-02-07","gmv":200.04,"views":0,"purchases":1},
+{"day":"2023-02-08","gmv":338.56,"views":0,"purchases":2},
+{"day":"2023-02-09","gmv":112.89,"views":0,"purchases":1},
+{"day":"2023-02-10","gmv":482.91,"views":1,"purchases":1},
+{"day":"2023-02-11","gmv":0,"views":0,"purchases":0},
+{"day":"2023-02-13","gmv":354.44,"views":1,"purchases":1},
+{"day":"2023-02-14","gmv":780.42,"views":0,"purchases":3},
+{"day":"2023-02-15","gmv":641.1,"views":1,"purchases":2},
+{"day":"2023-02-17","gmv":366.86,"views":0,"purchases":1},
+{"day":"2023-02-18","gmv":219.26,"views":0,"purchases":2},
+{"day":"2023-02-20","gmv":498.51,"views":1,"purchases":1},
+{"day":"2023-02-21","gmv":330.95,"views":0,"purchases":2},
+{"day":"2023-02-23","gmv":411.22,"views":0,"purchases":2},
+{"day":"2023-02-24","gmv":385.33,"views":1,"purchases":2},
+{"day":"2023-02-25","gmv":255.45,"views":0,"purchases":1},
+{"day":"2023-02-27","gmv":368.23,"views":0,"purchases":1},
+{"day":"2023-02-28","gmv":609.71,"views":2,"purchases":3},
+{"day":"2023-03-01","gmv":326.82,"views":0,"purchases":1},
+{"day":"2023-03-02","gmv":482.91,"views":0,"purchases":1},
+{"day":"2023-03-04","gmv":643.49,"views":1,"purchases":2},
+{"day":"2023-03-06","gmv":441.22,"views":0,"purchases":2},
+{"day":"2023-03-07","gmv":551.73,"views":2,"purchases":3},
+{"day":"2023-03-08","gmv":271.4,"views":0,"purchases":1},
+{"day":"2023-03-10","gmv":200.04,"views":0,"purchases":1},
+{"day":"2023-03-11","gmv":695.38,"views":1,"purchases":2},
+{"day":"2023-03-13","gmv":358.93,"views":0,"purchases":1},
+{"day":"2023-03-14","gmv":824.63,"views":2,"purchases":3},
+{"day":"2023-03-15","gmv":412.05,"views":0,"purchases":1},
+{"day":"2023-03-17","gmv":533.78,"views":1,"purchases":2},
+{"day":"2023-03-18","gmv":247.66,"views":0,"purchases":2},
+{"day":"2023-03-20","gmv":390.96,"views":0,"purchases":1},
+{"day":"2023-03-21","gmv":618.88,"views":1,"purchases":2},
+{"day":"2023-03-22","gmv":375.22,"views":0,"purchases":1},
+{"day":"2023-03-24","gmv":480.15,"views":0,"purchases":2},
+{"day":"2023-03-25","gmv":385.33,"views":2,"purchases":2},
+{"day":"2023-03-27","gmv":326.82,"views":0,"purchases":1},
+{"day":"2023-03-28","gmv":499.95,"views":1,"purchases":1},
+{"day":"2023-03-30","gmv":720.27,"views":0,"purchases":3},
+{"day":"2023-03-31","gmv":290.68,"views":0,"purchases":2},
+{"day":"2023-04-01","gmv":412.05,"views":1,"purchases":1},
+{"day":"2023-04-03","gmv":543.55,"views":0,"purchases":2},
+{"day":"2023-04-04","gmv":271.4,"views":1,"purchases":1},
+{"day":"2023-04-06","gmv":482.91,"views":0,"purchases":1},
+{"day":"2023-04-07","gmv":618.88,"views":2,"purchases":2},
+{"day":"2023-04-09","gmv":358.93,"views":0,"purchases":1},
+{"day":"2023-04-10","gmv":470.64,"views":1,"purchases":3},
+{"day":"2023-04-12","gmv":200.04,"views":0,"purchases":1},
+{"day":"2023-04-14","gmv":620.83,"views":1,"purchases":2},
+{"day":"2023-04-15","gmv":326.82,"views":0,"purchases":1},
+{"day":"2023-04-17","gmv":499.95,"views":2,"purchases":1},
+{"day":"2023-04-18","gmv":385.33,"views":0,"purchases":2},
+{"day":"2023-04-20","gmv":438.17,"views":0,"purchases":2},
+{"day":"2023-04-21","gmv":271.4,"views":1,"purchases":1},
+{"day":"2023-04-23","gmv":540.28,"views":0,"purchases":2},
+{"day":"2023-04-24","gmv":375.22,"views":0,"purchases":1},
+{"day":"2023-04-26","gmv":482.91,"views":2,"purchases":1},
+{"day":"2023-04-28","gmv":618.88,"views":0,"purchases":2},
+{"day":"2023-04-30","gmv":299.7,"views":1,"purchases":1},
+{"day":"2023-05-01","gmv":358.93,"views":0,"purchases":1},
+{"day":"2023-05-03","gmv":543.55,"views":1,"purchases":2},
+{"day":"2023-05-04","gmv":412.05,"views":0,"purchases":1},
+{"day":"2023-05-06","gmv":680.28,"views":2,"purchases":3},
+{"day":"2023-05-07","gmv":200.04,"views":0,"purchases":1},
+{"day":"2023-05-09","gmv":499.95,"views":1,"purchases":1},
+{"day":"2023-05-11","gmv":618.88,"views":0,"purchases":2},
+{"day":"2023-05-13","gmv":326.82,"views":1,"purchases":1},
+{"day":"2023-05-14","gmv":482.91,"views":0,"purchases":1},
+{"day":"2023-05-16","gmv":391.15,"views":2,"purchases":2},
+{"day":"2023-05-18","gmv":271.4,"views":0,"purchases":1},
+{"day":"2023-05-20","gmv":543.55,"views":1,"purchases":2},
+{"day":"2023-05-22","gmv":412.05,"views":0,"purchases":1},
+{"day":"2023-05-24","gmv":618.88,"views":2,"purchases":2},
+{"day":"2023-05-26","gmv":375.22,"views":0,"purchases":1},
+{"day":"2023-05-28","gmv":499.95,"views":1,"purchases":1},
+{"day":"2023-05-30","gmv":468.37,"views":0,"purchases":2},
+{"day":"2023-06-01","gmv":385.33,"views":1,"purchases":1},
+{"day":"2023-06-03","gmv":618.88,"views":0,"purchases":2},
+{"day":"2023-06-05","gmv":326.82,"views":2,"purchases":1},
+{"day":"2023-06-07","gmv":482.91,"views":0,"purchases":1},
+{"day":"2023-06-09","gmv":271.4,"views":1,"purchases":1},
+{"day":"2023-06-11","gmv":543.55,"views":0,"purchases":2},
+{"day":"2023-06-13","gmv":412.05,"views":1,"purchases":1},
+{"day":"2023-06-15","gmv":618.88,"views":2,"purchases":2},
+{"day":"2023-06-17","gmv":499.95,"views":0,"purchases":1},
+{"day":"2023-06-19","gmv":358.93,"views":1,"purchases":1},
+{"day":"2023-06-21","gmv":375.22,"views":0,"purchases":1},
+{"day":"2023-06-23","gmv":482.91,"views":2,"purchases":1},
+{"day":"2023-06-25","gmv":618.88,"views":0,"purchases":2},
+{"day":"2023-06-27","gmv":271.4,"views":1,"purchases":1},
+{"day":"2023-06-29","gmv":543.55,"views":0,"purchases":2},
+{"day":"2023-07-01","gmv":412.05,"views":1,"purchases":1},
+{"day":"2023-07-03","gmv":618.88,"views":0,"purchases":2},
+{"day":"2023-07-05","gmv":326.82,"views":2,"purchases":1},
+{"day":"2023-07-07","gmv":482.91,"views":0,"purchases":1},
+{"day":"2023-07-09","gmv":499.95,"views":1,"purchases":1},
+{"day":"2023-07-11","gmv":375.22,"views":0,"purchases":1},
+{"day":"2023-07-13","gmv":543.55,"views":2,"purchases":2},
+{"day":"2023-07-15","gmv":271.4,"views":0,"purchases":1},
+{"day":"2023-07-17","gmv":618.88,"views":1,"purchases":2},
+{"day":"2023-07-19","gmv":412.05,"views":0,"purchases":1},
+{"day":"2023-07-21","gmv":482.91,"views":2,"purchases":1},
+{"day":"2023-07-23","gmv":358.93,"views":0,"purchases":1},
+{"day":"2023-07-25","gmv":499.95,"views":1,"purchases":1},
+{"day":"2023-07-27","gmv":618.88,"views":0,"purchases":2},
+{"day":"2023-07-29","gmv":385.33,"views":1,"purchases":1},
+{"day":"2023-07-31","gmv":543.55,"views":0,"purchases":2},
+{"day":"2023-08-02","gmv":412.05,"views":2,"purchases":1},
+{"day":"2023-08-04","gmv":618.88,"views":0,"purchases":2},
+{"day":"2023-08-06","gmv":326.82,"views":1,"purchases":1},
+{"day":"2023-08-08","gmv":482.91,"views":0,"purchases":1},
+{"day":"2023-08-10","gmv":271.4,"views":2,"purchases":1},
+{"day":"2023-08-12","gmv":543.55,"views":0,"purchases":2},
+{"day":"2023-08-14","gmv":499.95,"views":1,"purchases":1},
+{"day":"2023-08-16","gmv":618.88,"views":0,"purchases":2},
+{"day":"2023-08-18","gmv":375.22,"views":2,"purchases":1},
+{"day":"2023-08-20","gmv":412.05,"views":0,"purchases":1},
+{"day":"2023-08-22","gmv":482.91,"views":1,"purchases":1},
+{"day":"2023-08-24","gmv":358.93,"views":0,"purchases":1},
+{"day":"2023-08-26","gmv":618.88,"views":2,"purchases":2},
+{"day":"2023-08-28","gmv":543.55,"views":0,"purchases":2},
+{"day":"2023-08-30","gmv":499.95,"views":1,"purchases":1},
+{"day":"2023-09-01","gmv":412.05,"views":0,"purchases":1},
+{"day":"2023-09-03","gmv":618.88,"views":2,"purchases":2},
+{"day":"2023-09-05","gmv":326.82,"views":0,"purchases":1},
+{"day":"2023-09-07","gmv":482.91,"views":1,"purchases":1},
+{"day":"2023-09-09","gmv":543.55,"views":0,"purchases":2},
+{"day":"2023-09-11","gmv":271.4,"views":2,"purchases":1},
+{"day":"2023-09-13","gmv":618.88,"views":0,"purchases":2},
+{"day":"2023-09-15","gmv":499.95,"views":1,"purchases":1},
+{"day":"2023-09-17","gmv":375.22,"views":0,"purchases":1},
+{"day":"2023-09-19","gmv":482.91,"views":2,"purchases":1},
+{"day":"2023-09-21","gmv":618.88,"views":0,"purchases":2},
+{"day":"2023-09-23","gmv":412.05,"views":1,"purchases":1},
+{"day":"2023-09-25","gmv":358.93,"views":0,"purchases":1},
+{"day":"2023-09-27","gmv":543.55,"views":2,"purchases":2},
+{"day":"2023-09-29","gmv":499.95,"views":0,"purchases":1},
+{"day":"2023-10-01","gmv":618.88,"views":1,"purchases":2},
+{"day":"2023-10-03","gmv":412.05,"views":0,"purchases":1},
+{"day":"2023-10-05","gmv":482.91,"views":2,"purchases":1},
+{"day":"2023-10-07","gmv":326.82,"views":0,"purchases":1},
+{"day":"2023-10-09","gmv":543.55,"views":1,"purchases":2},
+{"day":"2023-10-11","gmv":618.88,"views":0,"purchases":2},
+{"day":"2023-10-13","gmv":499.95,"views":2,"purchases":1},
+{"day":"2023-10-15","gmv":375.22,"views":0,"purchases":1},
+{"day":"2023-10-17","gmv":412.05,"views":1,"purchases":1},
+{"day":"2023-10-19","gmv":618.88,"views":0,"purchases":2},
+{"day":"2023-10-21","gmv":482.91,"views":2,"purchases":1},
+{"day":"2023-10-23","gmv":543.55,"views":0,"purchases":2},
+{"day":"2023-10-25","gmv":358.93,"views":1,"purchases":1},
+{"day":"2023-10-27","gmv":499.95,"views":0,"purchases":1},
+{"day":"2023-10-29","gmv":618.88,"views":2,"purchases":2},
+{"day":"2023-10-31","gmv":412.05,"views":0,"purchases":1},
+{"day":"2023-11-01","gmv":543.55,"views":1,"purchases":2},
+{"day":"2023-11-03","gmv":482.91,"views":0,"purchases":1},
+{"day":"2023-11-05","gmv":618.88,"views":2,"purchases":2},
+{"day":"2023-11-07","gmv":499.95,"views":0,"purchases":1},
+{"day":"2023-11-09","gmv":375.22,"views":1,"purchases":1},
+{"day":"2023-11-11","gmv":618.88,"views":0,"purchases":2},
+{"day":"2023-11-13","gmv":412.05,"views":2,"purchases":1},
+{"day":"2023-11-15","gmv":482.91,"views":0,"purchases":1},
+{"day":"2023-11-17","gmv":543.55,"views":1,"purchases":2},
+{"day":"2023-11-19","gmv":618.88,"views":0,"purchases":2},
+{"day":"2023-11-21","gmv":499.95,"views":2,"purchases":1},
+{"day":"2023-11-23","gmv":358.93,"views":0,"purchases":1},
+{"day":"2023-11-25","gmv":412.05,"views":1,"purchases":1},
+{"day":"2023-11-27","gmv":618.88,"views":0,"purchases":2},
+{"day":"2023-11-29","gmv":543.55,"views":2,"purchases":2},
+{"day":"2023-12-01","gmv":482.91,"views":0,"purchases":1},
+{"day":"2023-12-03","gmv":618.88,"views":1,"purchases":2},
+{"day":"2023-12-05","gmv":499.95,"views":0,"purchases":1},
+{"day":"2023-12-07","gmv":375.22,"views":2,"purchases":1},
+{"day":"2023-12-09","gmv":543.55,"views":0,"purchases":2},
+{"day":"2023-12-11","gmv":618.88,"views":1,"purchases":2},
+{"day":"2023-12-13","gmv":412.05,"views":0,"purchases":1},
+{"day":"2023-12-15","gmv":482.91,"views":2,"purchases":1},
+{"day":"2023-12-17","gmv":618.88,"views":0,"purchases":2},
+{"day":"2023-12-19","gmv":499.95,"views":1,"purchases":1},
+{"day":"2023-12-21","gmv":543.55,"views":0,"purchases":2},
+{"day":"2023-12-23","gmv":618.88,"views":2,"purchases":2},
+{"day":"2023-12-25","gmv":412.05,"views":0,"purchases":1},
+{"day":"2023-12-27","gmv":482.91,"views":1,"purchases":1},
+{"day":"2023-12-29","gmv":618.88,"views":0,"purchases":2},
+{"day":"2023-12-31","gmv":499.95,"views":2,"purchases":1}
+];
+
+const creatorsRaw = [
+{id:29,views:6,clicks:5,purchases:10,gmv:2893.28,followers:15168,conv:166.667},
+{id:49,views:5,clicks:2,purchases:8,gmv:2184.24,followers:85080,conv:160.0},
+{id:28,views:1,clicks:6,purchases:7,gmv:2093.22,followers:92917,conv:700.0},
+{id:16,views:3,clicks:5,purchases:10,gmv:2077.32,followers:24206,conv:333.333},
+{id:36,views:9,clicks:4,purchases:9,gmv:2032.86,followers:46830,conv:100.0},
+{id:6,views:7,clicks:4,purchases:8,gmv:2009.64,followers:88416,conv:114.286},
+{id:1,views:4,clicks:3,purchases:6,gmv:1969.61,followers:6229,conv:150.0},
+{id:24,views:7,clicks:4,purchases:5,gmv:1727.75,followers:97345,conv:71.429},
+{id:21,views:4,clicks:7,purchases:7,gmv:1686.16,followers:44540,conv:175.0},
+{id:7,views:3,clicks:6,purchases:4,gmv:1621.69,followers:14473,conv:133.333},
+{id:34,views:5,clicks:4,purchases:6,gmv:1575.78,followers:27158,conv:120.0},
+{id:9,views:4,clicks:8,purchases:7,gmv:1533.92,followers:74385,conv:175.0},
+{id:18,views:4,clicks:8,purchases:6,gmv:1530.31,followers:4248,conv:150.0},
+{id:23,views:3,clicks:5,purchases:5,gmv:1438.95,followers:88806,conv:166.667},
+{id:20,views:6,clicks:7,purchases:5,gmv:1423.4,followers:97542,conv:83.333},
+{id:25,views:2,clicks:13,purchases:5,gmv:1337.62,followers:33527,conv:250.0},
+{id:44,views:6,clicks:9,purchases:4,gmv:1326.71,followers:52,conv:66.667},
+{id:37,views:6,clicks:8,purchases:7,gmv:1325.19,followers:41001,conv:116.667},
+{id:42,views:7,clicks:2,purchases:4,gmv:1291.82,followers:26313,conv:57.143},
+{id:30,views:6,clicks:7,purchases:4,gmv:1256.34,followers:51140,conv:66.667},
+{id:4,views:7,clicks:3,purchases:4,gmv:1224.17,followers:90399,conv:57.143},
+{id:40,views:5,clicks:5,purchases:4,gmv:1214.82,followers:4101,conv:80.0},
+{id:50,views:6,clicks:4,purchases:6,gmv:1139.21,followers:67768,conv:100.0},
+{id:26,views:4,clicks:2,purchases:5,gmv:1135.61,followers:35970,conv:125.0},
+{id:32,views:4,clicks:10,purchases:5,gmv:1134.66,followers:62694,conv:125.0},
+{id:12,views:5,clicks:4,purchases:6,gmv:1063.02,followers:99235,conv:120.0},
+{id:11,views:8,clicks:1,purchases:5,gmv:1060.64,followers:82351,conv:62.5},
+{id:15,views:10,clicks:4,purchases:5,gmv:1051.78,followers:22299,conv:50.0},
+{id:31,views:1,clicks:3,purchases:6,gmv:1017.3,followers:6075,conv:600.0},
+{id:35,views:12,clicks:8,purchases:5,gmv:934.17,followers:52,conv:41.667},
+{id:5,views:4,clicks:4,purchases:3,gmv:908.08,followers:33706,conv:75.0},
+{id:13,views:6,clicks:3,purchases:4,gmv:873.58,followers:21257,conv:66.667},
+{id:39,views:8,clicks:7,purchases:4,gmv:870.86,followers:30219,conv:50.0},
+{id:3,views:5,clicks:4,purchases:4,gmv:864.7,followers:28535,conv:80.0},
+{id:8,views:5,clicks:3,purchases:2,gmv:785.77,followers:52,conv:40.0},
+{id:47,views:5,clicks:7,purchases:2,gmv:785.15,followers:37585,conv:40.0},
+{id:17,views:3,clicks:4,purchases:3,gmv:749.12,followers:55040,conv:100.0},
+{id:22,views:4,clicks:4,purchases:3,gmv:715.83,followers:52,conv:75.0},
+{id:38,views:3,clicks:3,purchases:3,gmv:680.37,followers:30831,conv:100.0},
+{id:33,views:3,clicks:3,purchases:3,gmv:667.41,followers:30154,conv:100.0},
+{id:10,views:7,clicks:4,purchases:3,gmv:658.27,followers:54264,conv:42.857},
+{id:41,views:7,clicks:1,purchases:4,gmv:623.83,followers:87511,conv:57.143},
+{id:2,views:6,clicks:4,purchases:2,gmv:575.98,followers:52,conv:33.333},
+{id:46,views:5,clicks:2,purchases:3,gmv:549.59,followers:10099,conv:60.0},
+{id:14,views:3,clicks:6,purchases:5,gmv:536.74,followers:32029,conv:166.667},
+{id:19,views:6,clicks:6,purchases:3,gmv:502.43,followers:24509,conv:50.0},
+{id:43,views:4,clicks:5,purchases:3,gmv:376.95,followers:53227,conv:75.0},
+{id:27,views:5,clicks:7,purchases:2,gmv:244.33,followers:21866,conv:40.0},
+{id:48,views:6,clicks:5,purchases:2,gmv:194.79,followers:47025,conv:33.333},
+{id:45,views:9,clicks:3,purchases:2,gmv:133.1,followers:37517,conv:22.222}
+];
+
+const cohortRaw = [
+{cohort:"2023-01",month:0,users:25,size:81,pct:30.9},
+{cohort:"2023-01",month:1,users:14,size:81,pct:17.3},
+{cohort:"2023-01",month:2,users:9,size:81,pct:11.1},
+{cohort:"2023-01",month:3,users:10,size:81,pct:12.3},
+{cohort:"2023-01",month:4,users:4,size:81,pct:4.9},
+{cohort:"2023-01",month:5,users:5,size:81,pct:6.2},
+{cohort:"2023-01",month:6,users:7,size:81,pct:8.6},
+{cohort:"2023-01",month:7,users:6,size:81,pct:7.4},
+{cohort:"2023-01",month:8,users:9,size:81,pct:11.1},
+{cohort:"2023-01",month:9,users:6,size:81,pct:7.4},
+{cohort:"2023-01",month:10,users:8,size:81,pct:9.9},
+{cohort:"2023-01",month:11,users:5,size:81,pct:6.2},
+{cohort:"2023-02",month:0,users:9,size:42,pct:21.4},
+{cohort:"2023-02",month:1,users:4,size:42,pct:9.5},
+{cohort:"2023-02",month:2,users:3,size:42,pct:7.1},
+{cohort:"2023-02",month:3,users:3,size:42,pct:7.1},
+{cohort:"2023-02",month:4,users:1,size:42,pct:2.4},
+{cohort:"2023-02",month:5,users:6,size:42,pct:14.3},
+{cohort:"2023-02",month:6,users:3,size:42,pct:7.1},
+{cohort:"2023-02",month:7,users:2,size:42,pct:4.8},
+{cohort:"2023-02",month:8,users:2,size:42,pct:4.8},
+{cohort:"2023-02",month:9,users:4,size:42,pct:9.5},
+{cohort:"2023-02",month:10,users:6,size:42,pct:14.3},
+{cohort:"2023-03",month:0,users:5,size:38,pct:13.2},
+{cohort:"2023-03",month:1,users:3,size:38,pct:7.9},
+{cohort:"2023-03",month:2,users:4,size:38,pct:10.5},
+{cohort:"2023-03",month:3,users:1,size:38,pct:2.6},
+{cohort:"2023-03",month:4,users:3,size:38,pct:7.9},
+{cohort:"2023-03",month:5,users:6,size:38,pct:15.8},
+{cohort:"2023-03",month:6,users:5,size:38,pct:13.2},
+{cohort:"2023-03",month:7,users:2,size:38,pct:5.3},
+{cohort:"2023-03",month:8,users:3,size:38,pct:7.9},
+{cohort:"2023-03",month:9,users:4,size:38,pct:10.5},
+{cohort:"2023-04",month:0,users:5,size:17,pct:29.4},
+{cohort:"2023-04",month:1,users:1,size:17,pct:5.9},
+{cohort:"2023-04",month:2,users:1,size:17,pct:5.9},
+{cohort:"2023-04",month:3,users:1,size:17,pct:5.9},
+{cohort:"2023-04",month:4,users:1,size:17,pct:5.9},
+{cohort:"2023-04",month:5,users:1,size:17,pct:5.9},
+{cohort:"2023-04",month:6,users:2,size:17,pct:11.8},
+{cohort:"2023-04",month:7,users:3,size:17,pct:17.6},
+{cohort:"2023-04",month:8,users:3,size:17,pct:17.6},
+{cohort:"2023-05",month:0,users:1,size:16,pct:6.3},
+{cohort:"2023-05",month:1,users:2,size:16,pct:12.5},
+{cohort:"2023-05",month:2,users:3,size:16,pct:18.8},
+{cohort:"2023-05",month:3,users:3,size:16,pct:18.8},
+{cohort:"2023-05",month:4,users:1,size:16,pct:6.3},
+{cohort:"2023-05",month:6,users:1,size:16,pct:6.3},
+{cohort:"2023-05",month:7,users:2,size:16,pct:12.5},
+{cohort:"2023-06",month:0,users:2,size:8,pct:25.0},
+{cohort:"2023-06",month:1,users:1,size:8,pct:12.5},
+{cohort:"2023-06",month:4,users:1,size:8,pct:12.5},
+{cohort:"2023-07",month:0,users:2,size:7,pct:28.6},
+{cohort:"2023-07",month:2,users:1,size:7,pct:14.3},
+{cohort:"2023-07",month:4,users:1,size:7,pct:14.3},
+{cohort:"2023-08",month:0,users:2,size:5,pct:40.0}
+];
+
+const liftRaw = [
+{creator:15,category:"Toys",lift:3.308,gmv:200.85,purchases:3},
+{creator:49,category:"Home",lift:3.14,gmv:1023.47,purchases:3},
+{creator:9,category:"Food",lift:2.684,gmv:865.37,purchases:3},
+{creator:43,category:"Fashion",lift:2.533,gmv:156.21,purchases:2},
+{creator:6,category:"Health",lift:2.381,gmv:67.48,purchases:2},
+{creator:14,category:"Toys",lift:2.205,gmv:327.12,purchases:2},
+{creator:16,category:"Toys",lift:2.205,gmv:543.55,purchases:2},
+{creator:29,category:"Toys",lift:2.205,gmv:823.22,purchases:2},
+{creator:30,category:"Sports",lift:2.148,gmv:674.41,purchases:2},
+{creator:3,category:"Home",lift:2.093,gmv:390.96,purchases:2},
+{creator:16,category:"Automotive",lift:1.727,gmv:336.38,purchases:1},
+{creator:18,category:"Books",lift:1.538,gmv:499.96,purchases:2}
+];
+
+// =====================================================
+// CHART CONFIG
+// =====================================================
+Chart.defaults.color = '#9b98a0';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.07)';
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+Chart.defaults.font.size = 13;
+
+const tooltipStyle = {
+  backgroundColor: '#1e1e28',
+  borderColor: 'rgba(255,255,255,0.1)',
+  borderWidth: 1,
+  titleColor: '#f0ede8',
+  bodyColor: '#9b98a0',
+  padding: 12,
+  cornerRadius: 8,
+  titleFont: { size: 12, weight: '600', family: "'DM Sans', sans-serif" },
+  bodyFont: { size: 11, family: "'DM Mono', monospace" }
+};
+
+// =====================================================
+// KPI ANIMATION
+// =====================================================
+function animateCount(el, target, prefix='', suffix='', decimals=0, duration=1200) {
+  const start = performance.now();
+  function tick(now) {
+    const t = Math.min((now - start) / duration, 1);
+    const ease = 1 - Math.pow(1-t, 3);
+    const val = target * ease;
+    el.textContent = prefix + (decimals > 0 ? val.toFixed(decimals) : Math.floor(val).toLocaleString()) + suffix;
+    if (t < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const totalGMV = creatorsRaw.reduce((a,c)=>a+c.gmv,0);
+  const totalPurch = creatorsRaw.reduce((a,c)=>a+c.purchases,0);
+  const convRate = (238/246*100);
+  const aov = 57608.07/238;
+
+  setTimeout(()=>{
+    animateCount(document.getElementById('kpi-gmv'), totalGMV, '₹', '', 0);
+    animateCount(document.getElementById('kpi-purchases'), totalPurch, '', '', 0);
+    animateCount(document.getElementById('kpi-conv'), convRate, '', '%', 1);
+    animateCount(document.getElementById('kpi-aov'), aov, '₹', '', 0);
+  }, 200);
+
+  buildTrendChart('gmv');
+  buildMonthlyChart();
+  buildCatPieChart();
+  buildCreatorCharts();
+  buildFunnel();
+  buildFunnelBarChart();
+  buildCohortCharts();
+  buildLiftCharts();
+  buildLeaderboard();
+  buildLiftGrid();
+  buildCohortHeatmap();
+});
+
+// =====================================================
+// TREND CHART
+// =====================================================
+let trendChartInst = null;
+function buildTrendChart(mode) {
+  const ctx = document.getElementById('trendChart').getContext('2d');
+  if (trendChartInst) trendChartInst.destroy();
+
+  // Aggregate to weekly for smoother viz
+  const weekly = {};
+  timeseriesRaw.forEach(d => {
+    const date = new Date(d.day);
+    // Get week start (Sunday)
+    const dayOfWeek = date.getDay();
+    const weekStart = new Date(date);
+    weekStart.setDate(date.getDate() - dayOfWeek);
+    const key = weekStart.toISOString().substr(0,10);
+    if (!weekly[key]) weekly[key] = {gmv:0, purchases:0, views:0};
+    weekly[key].gmv += d.gmv;
+    weekly[key].purchases += d.purchases;
+    weekly[key].views += d.views;
+  });
+  const labels = Object.keys(weekly).sort();
+  const gmvData = labels.map(k=>weekly[k].gmv);
+  const purchData = labels.map(k=>weekly[k].purchases);
+
+  const datasets = [];
+  if (mode === 'gmv' || mode === 'both') {
+    datasets.push({
+      label: 'GMV (₹)',
+      data: gmvData,
+      borderColor: '#c9a84c',
+      backgroundColor: 'rgba(201,168,76,0.08)',
+      borderWidth: 2,
+      fill: true,
+      tension: 0.4,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      pointHoverBackgroundColor: '#c9a84c',
+      yAxisID: 'y'
+    });
+  }
+  if (mode === 'purchases' || mode === 'both') {
+    datasets.push({
+      label: 'Purchases',
+      data: purchData,
+      borderColor: '#3ecfb2',
+      backgroundColor: 'rgba(62,207,178,0.06)',
+      borderWidth: 2,
+      fill: mode !== 'both',
+      tension: 0.4,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      pointHoverBackgroundColor: '#3ecfb2',
+      yAxisID: mode==='both' ? 'y2' : 'y'
+    });
+  }
+
+  const scales = {
+    x: { grid: { display: false }, ticks: { maxTicksLimit: 12, maxRotation: 0 } },
+    y: {
+      position: 'left',
+      grid: { color: 'rgba(255,255,255,0.05)' },
+      ticks: { callback: v => mode==='purchases' ? v : '₹'+v.toFixed(0) }
+    }
+  };
+  if (mode === 'both') {
+    scales.y2 = {
+      position: 'right', grid: { display: false },
+      ticks: { callback: v => v }
+    };
+  }
+
+  trendChartInst = new Chart(ctx, {
+    type: 'line',
+    data: { labels: labels.map(l => {
+      const d = new Date(l);
+      return d.toLocaleString('default', {month:'short', day:'numeric'});
+    }), datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: { duration: 800 },
+      interaction: { mode: 'index', intersect: false },
+      plugins: { tooltip: { ...tooltipStyle }, legend: { display: mode==='both', position:'top', align:'end', labels:{color:'#9b98a0', boxWidth:10, boxHeight:2, usePointStyle:true} } },
+      scales
+    }
+  });
+}
+
+function setTrend(mode, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  buildTrendChart(mode);
+}
+
+// =====================================================
+// MONTHLY CHART
+// =====================================================
+function buildMonthlyChart() {
+  const ctx = document.getElementById('monthlyChart').getContext('2d');
+  const monthly = {};
+  timeseriesRaw.forEach(d => {
+    const m = d.day.substr(0,7);
+    if (!monthly[m]) monthly[m] = 0;
+    monthly[m] += d.gmv;
+  });
+  const labels = Object.keys(monthly).sort();
+  const data = labels.map(k=>monthly[k]);
+  const maxVal = Math.max(...data);
+
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels.map(l => { const [y,m] = l.split('-'); return ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)]; }),
+      datasets: [{
+        data,
+        backgroundColor: data.map(v => `rgba(201,168,76,${0.25 + 0.65*(v/maxVal)})`),
+        borderColor: 'rgba(201,168,76,0.6)',
+        borderWidth: 1,
+        borderRadius: 4,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: { duration: 800, delay: (ctx) => ctx.dataIndex * 50 },
+      plugins: { tooltip: { ...tooltipStyle, callbacks: { label: c => ' ₹'+c.raw.toFixed(0) } }, legend: { display: false } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { callback: v => '₹'+v.toFixed(0) } }
+      }
+    }
+  });
+}
+
+// =====================================================
+// CATEGORY PIE
+// =====================================================
+function buildCatPieChart() {
+  const ctx = document.getElementById('catPieChart').getContext('2d');
+  const catGMV = {};
+  liftRaw.forEach(l => {
+    if (!catGMV[l.category]) catGMV[l.category] = 0;
+    catGMV[l.category] += l.gmv;
+  });
+  const cats = Object.keys(catGMV);
+  const vals = cats.map(c=>catGMV[c]);
+  const colors = ['#c9a84c','#3ecfb2','#6a9ff0','#f06a7e','#a87df0','#f0a06a','#7fc97f','#e06060','#60b0e0','#c060c0'];
+
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: cats,
+      datasets: [{ data: vals, backgroundColor: colors.map(c=>c+'cc'), borderColor: '#09090f', borderWidth: 3, hoverOffset: 8 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        tooltip: { ...tooltipStyle, callbacks: { label: c => ' ₹'+c.raw.toFixed(0) } },
+        legend: { position: 'right', labels: { color: '#9b98a0', boxWidth: 10, padding: 10, font: { size: 11 } } }
+      },
+      cutout: '68%'
+    }
+  });
+}
+
+// =====================================================
+// CREATOR CHARTS
+// =====================================================
+function buildCreatorCharts() {
+  // Top 10 GMV bar
+  const ctx1 = document.getElementById('creatorGMVChart').getContext('2d');
+  const top10 = creatorsRaw.slice(0,10);
+  new Chart(ctx1, {
+    type: 'bar',
+    data: {
+      labels: top10.map(c=>'Creator '+c.id),
+      datasets: [{
+        data: top10.map(c=>c.gmv),
+        backgroundColor: top10.map((_,i) => i===0?'rgba(201,168,76,0.9)':i===1?'rgba(201,168,76,0.6)':i===2?'rgba(201,168,76,0.4)':'rgba(106,159,240,0.3)'),
+        borderColor: top10.map((_,i)=>i<3?'rgba(201,168,76,0.9)':'rgba(106,159,240,0.5)'),
+        borderWidth: 1, borderRadius: 4, borderSkipped: false
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        tooltip: { ...tooltipStyle, callbacks: { label: c => ' ₹'+c.raw.toFixed(0) } },
+        legend: { display: false }
+      },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { callback: v=>'₹'+v.toFixed(0) } },
+        y: { grid: { display: false } }
+      }
+    }
+  });
+
+  // Conv% scatter: GMV vs Conv%
+  const ctx2 = document.getElementById('convScatterChart').getContext('2d');
+  new Chart(ctx2, {
+    type: 'scatter',
+    data: {
+      datasets: [{
+        label: 'Creators',
+        data: creatorsRaw.map(c=>({x: c.conv, y: c.gmv, id: c.id})),
+        backgroundColor: 'rgba(62,207,178,0.5)',
+        borderColor: 'rgba(62,207,178,0.8)',
+        borderWidth: 1,
+        pointRadius: 5,
+        pointHoverRadius: 8
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        tooltip: { ...tooltipStyle, callbacks: { label: c => `Creator ${c.raw.id} | Conv: ${c.raw.x.toFixed(0)}% | GMV: ₹${c.raw.y.toFixed(0)}` } },
+        legend: { display: false }
+      },
+      scales: {
+        x: { title: { display: true, text: 'Conversion Rate (%)', color: '#5c5968' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: { title: { display: true, text: 'GMV (₹)', color: '#5c5968' }, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { callback: v=>'₹'+v.toFixed(0) } }
+      }
+    }
+  });
+}
+
+// =====================================================
+// LEADERBOARD TABLE
+// =====================================================
+function buildLeaderboard() {
+  const tbody = document.getElementById('lbTableBody');
+  const totalGMV = creatorsRaw.reduce((a,c)=>a+c.gmv,0);
+  const maxGMV = creatorsRaw[0].gmv;
+
+  creatorsRaw.forEach((c, i) => {
+    const rank = i+1;
+    const rankClass = rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'rank-n';
+    const sharePct = (c.gmv/totalGMV*100).toFixed(1);
+    const barW = (c.gmv/maxGMV*100).toFixed(1);
+    const convColor = c.conv >= 200 ? 'color:var(--gold2)' : c.conv >= 100 ? 'color:var(--teal)' : 'color:var(--text2)';
+
+    tbody.innerHTML += `
+      <tr>
+        <td><span class="rank-badge ${rankClass}">${rank}</span></td>
+        <td><span class="creator-id">C-${String(c.id).padStart(2,'0')}</span></td>
+        <td><span class="metric-val metric-gold">₹${c.gmv.toFixed(0)}</span><div class="bar-mini"><div class="bar-mini-fill" style="width:${barW}%"></div></div></td>
+        <td><span class="metric-val metric-teal">${c.purchases}</span></td>
+        <td><span class="metric-val">${c.views}</span></td>
+        <td><span class="metric-val">${c.clicks}</span></td>
+        <td><span class="metric-val">${c.followers > 1000 ? (c.followers/1000).toFixed(0)+'K' : c.followers}</span></td>
+        <td><span class="metric-val" style="${convColor}">${c.conv.toFixed(0)}%</span></td>
+        <td><span class="metric-val" style="color:var(--text3)">${sharePct}%</span></td>
+      </tr>`;
+  });
+}
+
+// =====================================================
+// FUNNEL
+// =====================================================
+function buildFunnel() {
+  const stages = [
+    { name: 'Views', value: 264, color: 'linear-gradient(90deg,#6a9ff0,#4a7fd0)', pct: 100 },
+    { name: 'Clicks', value: 246, color: 'linear-gradient(90deg,#c9a84c,#a88530)', pct: 93.2 },
+    { name: 'Purchases', value: 238, color: 'linear-gradient(90deg,#3ecfb2,#20a090)', pct: 90.2 },
+    { name: 'GMV ₹', value: '57,608', color: 'linear-gradient(90deg,#a87df0,#8060d0)', pct: null }
+  ];
+
+  const container = document.getElementById('funnelViz');
+  stages.forEach((s, i) => {
+    const width = s.pct ? Math.max(s.pct, 30) : 85;
+    const drop = i > 0 && stages[i-1].pct ? ((stages[i-1].value - s.value) / stages[i-1].value * 100).toFixed(1) : null;
+    container.innerHTML += `
+      <div class="funnel-stage">
+        <div class="funnel-label">${s.name}</div>
+        <div class="funnel-bar-wrap">
+          <div class="funnel-bar" style="width:${width}%;background:${s.color}">
+            <span class="funnel-pct">${s.pct ? s.pct.toFixed(1)+'%' : ''}</span>
+            ${drop ? `<span class="funnel-drop">-${drop}%</span>` : ''}
+          </div>
+        </div>
+        <div class="funnel-count">${typeof s.value==='string' ? s.value : s.value.toLocaleString()}</div>
+      </div>`;
+  });
+}
+
+function buildFunnelBarChart() {
+  const ctx = document.getElementById('funnelBarChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Views', 'Clicks', 'Purchases'],
+      datasets: [{
+        label: 'Count',
+        data: [264, 246, 238],
+        backgroundColor: ['rgba(106,159,240,0.7)','rgba(201,168,76,0.7)','rgba(62,207,178,0.7)'],
+        borderColor: ['#6a9ff0','#c9a84c','#3ecfb2'],
+        borderWidth: 1, borderRadius: 6, borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        tooltip: { ...tooltipStyle },
+        legend: { display: false },
+        annotation: {}
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: { grid: { color: 'rgba(255,255,255,0.05)' }, min: 220, max: 270 }
+      }
+    }
+  });
+}
+
+// =====================================================
+// COHORT CHARTS
+// =====================================================
+function buildCohortCharts() {
+  // Line chart per cohort
+  const ctx1 = document.getElementById('cohortLineChart').getContext('2d');
+  const cohorts = [...new Set(cohortRaw.map(c=>c.cohort))];
+  const colors = ['#c9a84c','#3ecfb2','#6a9ff0','#f06a7e','#a87df0','#f0a06a','#7fc97f','#e06060'];
+  const maxMonths = Math.max(...cohortRaw.map(c=>c.month));
+  const monthLabels = Array.from({length:maxMonths+1},(_,i)=>`M${i}`);
+
+  const datasets = cohorts.map((coh,i) => {
+    const entries = cohortRaw.filter(c=>c.cohort===coh);
+    const data = Array(maxMonths+1).fill(null);
+    entries.forEach(e => { data[e.month] = e.pct; });
+    return {
+      label: coh,
+      data,
+      borderColor: colors[i%colors.length],
+      backgroundColor: 'transparent',
+      borderWidth: 1.5,
+      tension: 0.3,
+      pointRadius: 3,
+      pointHoverRadius: 5,
+      spanGaps: false
+    };
+  });
+
+  new Chart(ctx1, {
+    type: 'line',
+    data: { labels: monthLabels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        tooltip: { ...tooltipStyle, callbacks: { label: c => ` ${c.dataset.label}: ${c.raw ? c.raw.toFixed(1)+'%' : 'N/A'}` } },
+        legend: { position:'bottom', labels: { color:'#9b98a0', boxWidth:8, boxHeight:2, usePointStyle:true, padding:10, font:{size:10} } }
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: { grid: { color:'rgba(255,255,255,0.05)' }, ticks: { callback: v=>v+'%' }, min:0, max:45 }
+      }
+    }
+  });
+
+  // Cohort size bar
+  const ctx2 = document.getElementById('cohortSizeChart').getContext('2d');
+  const cohortSizes = cohorts.map(c => {
+    const entry = cohortRaw.find(r=>r.cohort===c && r.month===0);
+    return entry ? entry.size : 0;
+  });
+  new Chart(ctx2, {
+    type: 'bar',
+    data: {
+      labels: cohorts,
+      datasets: [{
+        data: cohortSizes,
+        backgroundColor: colors.map(c=>c+'99'),
+        borderColor: colors,
+        borderWidth: 1, borderRadius: 4, borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend:{display:false}, tooltip:{...tooltipStyle, callbacks:{label:c=>` ${c.raw} users`}} },
+      scales: {
+        x: { grid:{display:false} },
+        y: { grid:{color:'rgba(255,255,255,0.05)'}, ticks:{callback:v=>v+' users'} }
+      }
+    }
+  });
+}
+
+// =====================================================
+// COHORT HEATMAP
+// =====================================================
+function buildCohortHeatmap() {
+  const cohorts = [...new Set(cohortRaw.map(c=>c.cohort))].sort();
+  const maxM = Math.max(...cohortRaw.map(c=>c.month));
+  let html = '<table class="cohort-table"><thead><tr><th>Cohort</th><th>Size</th>';
+  for (let m=0; m<=maxM; m++) html += `<th>M${m}</th>`;
+  html += '</tr></thead><tbody>';
+
+  cohorts.forEach(coh => {
+    const entries = cohortRaw.filter(c=>c.cohort===coh);
+    const size = entries.find(e=>e.month===0)?.size || 0;
+    html += `<tr><td class="cohort-label">${coh}</td><td class="cohort-label" style="font-family:'DM Mono',monospace">${size}</td>`;
+    for (let m=0; m<=maxM; m++) {
+      const entry = entries.find(e=>e.month===m);
+      if (entry) {
+        const pct = entry.pct;
+        const intensity = Math.min(pct/35, 1);
+        const bg = `rgba(201,168,76,${0.08 + 0.7*intensity})`;
+        const textColor = intensity > 0.5 ? '#000' : '#c9a84c';
+        html += `<td><div class="cohort-cell" style="background:${bg};color:${textColor}" title="${coh} M${m}: ${pct.toFixed(1)}%">${pct.toFixed(0)}%</div></td>`;
+      } else {
+        html += `<td><div class="cohort-cell empty-cell" style="background:rgba(255,255,255,0.03);color:var(--surface3)">—</div></td>`;
+      }
+    }
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('cohortHeatmap').innerHTML = html;
+}
+
+// =====================================================
+// LIFT CHARTS
+// =====================================================
+function buildLiftCharts() {
+  const ctx1 = document.getElementById('liftBarChart').getContext('2d');
+  const top = liftRaw.filter(l=>l.lift>1).slice(0,10);
+  const colors = ['#c9a84c','#3ecfb2','#6a9ff0','#f06a7e','#a87df0','#f0a06a','#7fc97f','#e06060','#60b0e0','#c060c0'];
+  new Chart(ctx1, {
+    type: 'bar',
+    data: {
+      labels: top.map(l=>`C-${String(l.creator).padStart(2,'0')} · ${l.category}`),
+      datasets: [{
+        data: top.map(l=>l.lift),
+        backgroundColor: top.map((_,i)=>colors[i%colors.length]+'cc'),
+        borderColor: top.map((_,i)=>colors[i%colors.length]),
+        borderWidth: 1, borderRadius: 4, borderSkipped: false
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        tooltip: { ...tooltipStyle, callbacks: { label: c => ` ${c.raw.toFixed(2)}× lift` } },
+        legend: { display: false }
+      },
+      scales: {
+        x: { grid: { color:'rgba(255,255,255,0.05)' }, min: 0, ticks: { callback: v=>v+'×' } },
+        y: { grid: { display: false }, ticks: { font: { size: 10 } } }
+      }
+    }
+  });
+
+  const ctx2 = document.getElementById('liftGMVChart').getContext('2d');
+  const catGMV = {};
+  liftRaw.forEach(l => { if (!catGMV[l.category]) catGMV[l.category]=0; catGMV[l.category]+=l.gmv; });
+  const cats = Object.keys(catGMV);
+  const vals = cats.map(c=>catGMV[c]);
+  new Chart(ctx2, {
+    type: 'doughnut',
+    data: {
+      labels: cats,
+      datasets: [{ data: vals, backgroundColor: colors.map(c=>c+'cc'), borderColor:'#09090f', borderWidth:3, hoverOffset:8 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        tooltip: { ...tooltipStyle, callbacks: { label: c => ` ₹${c.raw.toFixed(0)}` } },
+        legend: { position:'bottom', labels: { color:'#9b98a0', boxWidth:8, padding:8, font:{size:10} } }
+      },
+      cutout: '65%'
+    }
+  });
+}
+
+function buildLiftGrid() {
+  const grid = document.getElementById('liftGrid');
+  const icons = { Toys:'🧸', Home:'🏠', Food:'🍔', Fashion:'👗', Health:'💊', Sports:'⚽', Books:'📚', Beauty:'💄', Automotive:'🚗', Electronics:'📱' };
+  liftRaw.filter(l=>l.lift>1).slice(0,12).forEach(l => {
+    const liftColor = l.lift >= 3 ? 'color:var(--gold2)' : l.lift >= 2 ? 'color:var(--teal)' : 'color:var(--text2)';
+    grid.innerHTML += `
+      <div class="lift-item">
+        <div class="lift-icon">${icons[l.category]||'📦'}</div>
+        <div class="lift-info">
+          <div class="lift-category">${l.category}</div>
+          <div class="lift-meta">Creator C-${String(l.creator).padStart(2,'0')} · ₹${l.gmv.toFixed(0)} GMV · ${l.purchases} purchases</div>
+        </div>
+        <div class="lift-score" style="${liftColor}">${l.lift.toFixed(2)}<span>×</span></div>
+      </div>`;
+  });
+}
+
+// =====================================================
+// PANEL NAVIGATION
+// =====================================================
+function showPanel(name, btn) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>
